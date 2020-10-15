@@ -3,9 +3,7 @@ from tkinter import ttk
 import tensorflow as tf
 import numpy as np
 from tensorflow import keras
-from PIL import Image, ImageDraw, ImageGrab
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
+from PIL import Image, ImageGrab
 import cv2
 
 class Paint(object):
@@ -47,6 +45,7 @@ class Paint(object):
         self.setup()
         self.root.mainloop()
 
+
     def setup(self):
         self.old_x = None
         self.old_y = None
@@ -55,45 +54,28 @@ class Paint(object):
         self.canvas.bind('<B1-Motion>', self.paint)
         self.canvas.bind('<ButtonRelease-1>', self.reset)
 
+
     def guess(self):
-        self.get_canvas_picture()
-        self.resize_picture()
-        self.get_greyscale_picture()
+        self.get_canvas_picture_grayscale()
         image_data = self.get_pixel_values()
         prediction = self.nn.model.predict([image_data])
         predicted_number = np.argmax(prediction)
         self.guess_label['text'] = "Guess: " + str(predicted_number.item())
 
 
-    def get_canvas_picture(self):
+    def get_canvas_picture_grayscale(self):
         x = self.root.winfo_rootx() + self.canvas.winfo_x()
         y = self.root.winfo_rooty() + self.canvas.winfo_y()
         x1 = x + self.canvas.winfo_width()
         y1 = y + self.canvas.winfo_height()
-        ImageGrab.grab().crop((x, y, x1, y1)).save(self.FILE_NAME)
+        ImageGrab.grab().crop((x, y, x1, y1)).resize((28,28)).convert('L').save(self.FILE_NAME)
 
-    def resize_picture(self):
-        img = Image.open(self.FILE_NAME)
-        size = 28, 28
-        img.thumbnail(size, Image.ANTIALIAS)
-        img.save(self.FILE_RESIZED, "png")
-
-    def rgb2gray(self, rgb):
-        # Formula to convert to Greyscale from RGB
-        # Y' = 0.2989 R + 0.5870 G + 0.1140 B
-
-        return np.dot(rgb[..., :3], [0.2989, 0.5870, 0.1140])
-
-    def get_greyscale_picture(self):
-        img = Image.open('number_resized.png').convert('L')
-        img.save(self.FILE_GREYSCALE)
 
     def get_pixel_values(self):
-        img = cv2.imread(self.FILE_GREYSCALE, 0)
+        img = cv2.imread(self.FILE_NAME, 0)
         data = np.asarray(img)
 
-        #revert greyscale values, the ones used in mnist are: 0 - white, 255-black. In greyscale
-        #it is reverted
+        #revert greyscale values, the ones used in mnist are: 0 - white, 255-black. In greyscale it is reversed
         numpy_array = np.empty(shape=(28,28), dtype=np.float16)
 
         for x in range(0, data.shape[0]):
@@ -104,8 +86,10 @@ class Paint(object):
         numpy_array = np.expand_dims(numpy_array, axis=0)
         return numpy_array
 
+
     def erase(self):
         self.canvas.delete("all")
+
 
     def paint(self, event):
         self.line_width = self.line_width
@@ -117,8 +101,10 @@ class Paint(object):
         self.old_x = event.x
         self.old_y = event.y
 
+
     def reset(self, event):
         self.old_x, self.old_y = None, None
+
 
 class NeuralNetwork(object):
 
@@ -131,6 +117,7 @@ class NeuralNetwork(object):
         ])
         self.model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
 
+
     def trainNN(self):
         (training_images, training_labels), (test_images, test_labels) = self.data.load_data()
         training_images = training_images / 255.0
@@ -140,6 +127,7 @@ class NeuralNetwork(object):
 
         test_loss, test_acc = self.model.evaluate(test_images, test_labels)
         print(test_acc)
+
 
 if __name__ == '__main__':
     nn = NeuralNetwork()
